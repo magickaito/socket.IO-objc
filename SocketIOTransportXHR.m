@@ -83,6 +83,7 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
         [conn cancel];
     }
     [_polls removeAllObjects];
+    _polls = nil;
 }
 
 - (BOOL) isReady
@@ -102,24 +103,28 @@ static NSString* kSecureXHRPortURL = @"https://%@:%d/socket.io/1/xhr-polling/%@"
 - (void) checkAndStartPoll
 {
     BOOL restart = NO;
-    // no polls currently running -> start one
-    if ([_polls count] == 0) {
-        restart = YES;
-    }
-    else {
-        restart = YES;
-        // look for polls w/o data -> if there, no need to restart
-        for (NSString *key in _polls) {
-            NSMutableDictionary *pollData = [_polls objectForKey:key];
-            if ([pollData objectForKey:@"data"] == nil) {
-                restart = NO;
-                break;
+    // if this is nill we are disconnected and this function call should be ignored.
+    if(_polls != nil)
+    {
+        // no polls currently running -> start one
+        if ([_polls count] == 0) {
+            restart = YES;
+        }
+        else {
+            restart = YES;
+            // look for polls w/o data -> if there, no need to restart
+            for (NSString *key in _polls) {
+                NSMutableDictionary *pollData = [_polls objectForKey:key];
+                if ([pollData objectForKey:@"data"] == nil) {
+                    restart = NO;
+                    break;
+                }
             }
         }
-    }
-    
-    if (restart) {
-        [self poll:nil];
+        
+        if (restart) {
+            [self poll:nil];
+        }
     }
 }
 

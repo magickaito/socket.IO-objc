@@ -47,7 +47,6 @@ typedef enum {
 @optional
 - (void) socketIODidConnect:(SocketIO *)socket;
 - (void) socketIODidDisconnect:(SocketIO *)socket disconnectedWithError:(NSError *)error;
-- (void) socketIODidReceiveReconnectSuggestionFromServer:(SocketIO *)socket;
 - (void) socketIO:(SocketIO *)socket didReceiveMessage:(SocketIOPacket *)packet;
 - (void) socketIO:(SocketIO *)socket didReceiveJSON:(SocketIOPacket *)packet;
 - (void) socketIO:(SocketIO *)socket didReceiveEvent:(SocketIOPacket *)packet;

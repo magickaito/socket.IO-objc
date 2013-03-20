@@ -160,6 +160,28 @@ NSString* const SocketIOException = @"SocketIOException";
     }
 }
 
+- (void) reset
+{
+    _isConnected = NO;
+    _isConnecting = NO;
+    _sid = nil;
+    
+    [_queue removeAllObjects];
+    
+    // Kill the heartbeat timer
+    if (_timeout != nil) {
+        [_timeout invalidate];
+        _timeout = nil;
+    }
+    
+    // Disconnect the websocket, just in case
+    if (_transport != nil) {
+        // clear websocket's delegate - otherwise crashes
+        _transport.delegate = nil;
+        [_transport close];
+    }
+}
+
 - (void) sendMessage:(NSString *)data
 {
     [self sendMessage:data withAcknowledge:nil];
@@ -352,6 +374,12 @@ NSString* const SocketIOException = @"SocketIOException";
         // Regular single-packet payload
         return @[payload];
     }
+}
+
+- (void) reconnect
+{
+    NSLog(@"automatic reconnect!");
+    [self connectToHost:_host onPort:_port withParams:_params];
 }
 
 # pragma mark -
@@ -555,9 +583,13 @@ NSString* const SocketIOException = @"SocketIOException";
                 DEBUGLOG(@"error");
                 if([packet.data isEqualToString:@"1+0"])
                 {
-                    if ([_delegate respondsToSelector:@selector(socketIODidReceiveReconnectSuggestionFromServer:)]) {
-                        [_delegate socketIODidReceiveReconnectSuggestionFromServer:self];
-                    }
+                    // server asking us to disconnect
+                    // calling onDisconnect will clear up the socket object and trigger the disconnected delegate
+                    // user can choose to reconnect when disconnected event happens.
+                    NSString *description = @"server instructed us to reconnect because it doesn't recognise our sid anymore";
+                    NSString *recoverySuggestion = @"client should reconnect to server now";
+                    NSDictionary *errorInfo = @{NSLocalizedDescriptionKey:description, NSLocalizedRecoverySuggestionErrorKey:recoverySuggestion};
+                    [self onDisconnect:[[NSError alloc] initWithDomain:@"com.tplusinteractive" code:-1 userInfo:errorInfo]];
                 }
                 break;
             }
@@ -584,24 +616,7 @@ NSString* const SocketIOException = @"SocketIOException";
     BOOL wasConnected = _isConnected;
     BOOL wasConnecting = _isConnecting;
     
-    _isConnected = NO;
-    _isConnecting = NO;
-    _sid = nil;
-    
-    [_queue removeAllObjects];
-    
-    // Kill the heartbeat timer
-    if (_timeout != nil) {
-        [_timeout invalidate];
-        _timeout = nil;
-    }
-    
-    // Disconnect the websocket, just in case
-    if (_transport != nil) {
-        // clear websocket's delegate - otherwise crashes
-        _transport.delegate = nil;
-        [_transport close];
-    }
+    [self reset];
     
     if ((wasConnected || wasConnecting)) {
         if ([_delegate respondsToSelector:@selector(socketIODidDisconnect:disconnectedWithError:)]) {
