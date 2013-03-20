@@ -518,6 +518,12 @@ NSString* const SocketIOException = @"SocketIOException";
             }
             case 7: {
                 DEBUGLOG(@"error");
+                if([packet.data isEqualToString:@"1+0"])
+                {
+                    if ([_delegate respondsToSelector:@selector(socketIODidReceiveReconnectSuggestionFromServer:)]) {
+                        [_delegate socketIODidReceiveReconnectSuggestionFromServer:self];
+                    }
+                }
                 break;
             }
             case 8: {
