@@ -330,6 +330,30 @@ NSString* const SocketIOException = @"SocketIOException";
     [self setTimeout];
 }
 
+- (NSArray *)packetsFromPayload:(NSString *)payload
+{
+    // "Batched" format is:
+    // �[packet_0 length]�[packet_0]�[packet_1 length]�[packet_1]�[packet_n length]�[packet_n]
+    
+    if([payload hasPrefix:@"\ufffd"]) {
+        // Payload has multiple packets, split based on the '�' character
+        NSMutableArray *packets = [NSMutableArray arrayWithCapacity:2];
+        // Skip the first character, then split
+        NSArray *split = [[payload substringFromIndex:1] componentsSeparatedByString:@"\ufffd"];
+        // Now all of the odd-numbered indices are the packets (1, 3, 5, etc.)
+        for (NSInteger i=0; i<split.count; i++) {
+            if (i % 2 != 0) {
+                [packets addObject:split[i]];
+            }
+        }
+        NSLog(@"Parsed a payload!");
+        return packets;
+    } else {
+        // Regular single-packet payload
+        return @[payload];
+    }
+}
+
 # pragma mark -
 # pragma mark Acknowledge methods
 
@@ -413,6 +437,17 @@ NSString* const SocketIOException = @"SocketIOException";
     
     // data arrived -> reset timeout
     [self setTimeout];
+    
+    if([data hasPrefix:@"\ufffd"])
+    {
+        // multiple packets found, split them
+        NSArray *packets = [self packetsFromPayload:data];
+        for(NSString *packet in packets)
+        {
+            [self onData:packet];
+        }
+        return;
+    }
     
     // check if data is valid (from socket.io.js)
     NSString *regex = @"^([^:]+):([0-9]+)?(\\+)?:([^:]+)?:?(.*)?$";
