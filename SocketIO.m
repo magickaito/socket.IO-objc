@@ -376,12 +376,6 @@ NSString* const SocketIOException = @"SocketIOException";
     }
 }
 
-- (void) reconnect
-{
-    NSLog(@"automatic reconnect!");
-    [self connectToHost:_host onPort:_port withParams:_params];
-}
-
 # pragma mark -
 # pragma mark Acknowledge methods
 
